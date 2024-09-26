@@ -1,11 +1,11 @@
 from fastapi import Depends, FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import List
-
-from . import crud, schemas
-from . import models,database
 from sqlalchemy.orm import Session
 
+from . import crud, schemas
+from . import models, database
+from .producer import send_book_event  # Kafka üreticisini içe aktarın
 
 app = FastAPI()
 models.Base.metadata.create_all(bind=database.engine)
@@ -22,8 +22,9 @@ class Book(BaseModel):
 
 @app.post("/books", response_model=schemas.Book)
 def create_book(item: schemas.BookCreate, db: Session = Depends(database.get_db)):
-    return crud.create_book(db=db, item=item)
-
+    book = crud.create_book(db=db, item=item)
+    send_book_event('BOOK_CREATED', schemas.Book.from_orm(book).dict())  # Kafka mesajı gönder
+    return book
 
 @app.get("/books/{book_id}", response_model=schemas.Book)
 def read_book(book_id: int, db: Session = Depends(database.get_db)):
@@ -50,8 +51,8 @@ def delete_book(book_id: int, db: Session = Depends(database.get_db)):
     db_book = crud.delete_book(db=db, book_id=book_id)
     if db_book is None:
         raise HTTPException(status_code=404, detail="Book not found")
+    send_book_event('BOOK_DELETED', {'id': book_id})  # Kafka mesajı gönder
     return db_book
-
 
 @app.get("/")
 def read_root():
