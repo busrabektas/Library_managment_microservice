@@ -91,6 +91,22 @@ services:
       SQLALCHEMY_DATABASE_URL: "mysql+pymysql://root:@mysql:3306/library_db"
 
 
+  inventory-service:
+      build:
+        context: ./inventory_service
+      container_name: inventory-service
+      depends_on:
+        kafka:
+          condition: service_healthy
+        mysql:
+          condition: service_started
+      ports:
+        - '8004:8004'
+      environment:
+        KAFKA_BOOTSTRAP_SERVERS: 'kafka:9092'
+        SQLALCHEMY_DATABASE_URL: 'mysql+pymysql://root:@mysql/library_db'
+
+
 
 
 
