@@ -1,10 +1,9 @@
 from pydantic import BaseModel
 
 class UserBase(BaseModel):
-    id:int
-    title: str
-    author: str
-    published_year: int
+    full_name: str
+    email: str
+    age: int
 
 class UserCreate(UserBase):
     pass

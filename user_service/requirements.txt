@@ -1,4 +1,9 @@
+
 fastapi
 uvicorn
 sqlalchemy
+confluent-kafka
 pydantic
+PyMySQL
+kafka-python
+cryptography

@@ -75,6 +75,25 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: 'kafka:9092'
       SQLALCHEMY_DATABASE_URL: "mysql+pymysql://root:@mysql:3306/library_db"
 
+  user-service:
+    build:
+      context: ./user_service  # User service'in dosya yolu
+    container_name: user-service
+    depends_on:
+      kafka:
+        condition: service_healthy
+      mysql:
+        condition: service_started
+    ports:
+      - '8003:8003'  # User Service portu
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: 'kafka:9092'
+      SQLALCHEMY_DATABASE_URL: "mysql+pymysql://root:@mysql:3306/library_db"
+
+
+
+
+
 volumes:
   mysql-data:
 
