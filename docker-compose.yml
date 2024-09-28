@@ -34,12 +34,13 @@ services:
     container_name: mysql
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: yo045?*kLa/n
+      MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'  # Boş şifre kullanımına izin ver
       MYSQL_DATABASE: library_db
     ports:
       - '3307:3306'
     volumes:
       - mysql-data:/var/lib/mysql
+
 
   book-service:
     build:
@@ -54,8 +55,25 @@ services:
       - '8000:8000'
     environment:
       KAFKA_BOOTSTRAP_SERVERS: 'kafka:9092'
-      SQLALCHEMY_DATABASE_URL: 'mysql+pymysql://root:yo045?*kLa/n@mysql/library_db'
+      SQLALCHEMY_DATABASE_URL: "mysql+pymysql://root:@mysql:3306/library_db"
 
+
+
+
+  loan-service:
+    build:
+      context: ./loan_service  
+    container_name: loan-service
+    depends_on:
+      kafka:
+        condition: service_healthy
+      mysql:
+        condition: service_started
+    ports:
+      - '8001:8001'  
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: 'kafka:9092'
+      SQLALCHEMY_DATABASE_URL: "mysql+pymysql://root:@mysql:3306/library_db"
 
 volumes:
   mysql-data:

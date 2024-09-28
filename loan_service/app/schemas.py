@@ -16,4 +16,4 @@ class Loan(LoanBase):
     is_returned: bool
 
     class Config:
-        orm_mode = True
+        from_attributes = True

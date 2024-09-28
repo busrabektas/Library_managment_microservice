@@ -2,13 +2,23 @@ from fastapi import Depends, FastAPI, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 from . import crud, models, schemas, database
+from pydantic import BaseModel
+from .producer import send_loan_event
 
+class LoanBase(BaseModel):
+    user_id: int
+    book_id: int
 app = FastAPI()
 models.Base.metadata.create_all(bind=database.engine)
 
+
 @app.post("/loans", response_model=schemas.Loan)
 def create_loan(loan: schemas.LoanCreate, db: Session = Depends(database.get_db)):
-    return crud.create_loan(db=db, loan=loan)
+    created_loan = crud.create_loan(db=db, loan=loan)
+    # created_loan'u Pydantic modeli ile dönüşüm yapın
+    send_loan_event('loan_created', {'user_id': loan.user_id, 'book_id': loan.book_id})  
+    return created_loan
+
 
 @app.get("/loans", response_model=List[schemas.Loan])
 def read_loans(skip: int = 0, limit: int = 10, db: Session = Depends(database.get_db)):
