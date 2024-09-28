@@ -4,12 +4,16 @@ from app.models import Book
 
 from app.schemas import BookCreate
 
+from . import models
+
+
 def create_book(db: Session, book: BookCreate):
-    db_book = Book(title=book.title, author=book.author, isbn=book.isbn, quantity=book.quantity)
+    db_book = models.Book(title=book.title, author=book.author, isbn=book.isbn, quantity=book.quantity)
     db.add(db_book)
     db.commit()
     db.refresh(db_book)
     return db_book
+
 
 def get_books(db: Session, skip: int = 0, limit: int = 10):
     return db.query(Book).offset(skip).limit(limit).all()

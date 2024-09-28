@@ -3,46 +3,54 @@ from sqlalchemy.orm import Session
 
 from app import crud, models, schemas
 
-from app.database import SessionLocal, engine
+from .database import SessionLocal, engine
+from app import database
+from .producer import send_inventory_update
+from .kafka_admin import create_kafka_topic
+from contextlib import asynccontextmanager
 
-models.Base.metadata.create_all(bind=engine)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    create_kafka_topic("inventory_updates")  # Kafka topic'i otomatik olarak oluşturuyoruz
+    yield
 
-app = FastAPI()
+app = FastAPI(lifespan=lifespan)
 
-# Veritabanı oturumu her istekte açılır ve kapatılır
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+models.Base.metadata.create_all(bind=database.engine)
+
+
 
 @app.post("/books/", response_model=schemas.Book)
-def create_book(book: schemas.BookCreate, db: Session = Depends(get_db)):
+def create_book(book: schemas.BookCreate, db: Session = Depends(database.get_db)):
     return crud.create_book(db=db, book=book)
 
 @app.get("/books/", response_model=list[schemas.Book])
-def read_books(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
+def read_books(skip: int = 0, limit: int = 10, db: Session = Depends(database.get_db)):
     books = crud.get_books(db, skip=skip, limit=limit)
     return books
 
 @app.get("/books/{book_id}", response_model=schemas.Book)
-def read_book(book_id: int, db: Session = Depends(get_db)):
+def read_book(book_id: int, db: Session = Depends(database.get_db)):
     db_book = crud.get_book(db, book_id=book_id)
     if db_book is None:
         raise HTTPException(status_code=404, detail="Book not found")
     return db_book
 
 @app.put("/books/{book_id}", response_model=schemas.Book)
-def update_book_quantity(book_id: int, quantity: int, db: Session = Depends(get_db)):
+def update_book_quantity(book_id: int, quantity: int, db: Session = Depends(database.get_db)):
     db_book = crud.update_book_quantity(db, book_id=book_id, quantity=quantity)
     if db_book is None:
         raise HTTPException(status_code=404, detail="Book not found")
+    
     return db_book
 
 @app.delete("/books/{book_id}", response_model=schemas.Book)
-def delete_book(book_id: int, db: Session = Depends(get_db)):
+def delete_book(book_id: int, db: Session = Depends(database.get_db)):
     db_book = crud.delete_book(db, book_id=book_id)
     if db_book is None:
         raise HTTPException(status_code=404, detail="Book not found")
     return db_book
+
+@app.get("/")
+def read_root():
+    return {"message": "Inventory Service is running!"}
