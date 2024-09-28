@@ -1,55 +1,62 @@
+# inventory_service/main.py
+
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
-
-from app import crud, models, schemas
-
-from .database import SessionLocal, engine
-from app import database
-from .producer import send_inventory_update
-from .kafka_admin import create_kafka_topic
+from typing import List
 from contextlib import asynccontextmanager
+import asyncio
+import logging
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    create_kafka_topic("inventory_updates")  # Kafka topic'i otomatik olarak oluşturuyoruz
-    yield
+from . import crud, models, schemas, database
+# from .producer import send_inventory_update
+# from .kafka_admin import create_kafka_topic
+# from .consumer import consume_events
 
-app = FastAPI(lifespan=lifespan)
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
 
 models.Base.metadata.create_all(bind=database.engine)
 
+# Initialize FastAPI app with lifespan
+app = FastAPI()
 
+# Create tables
 
-@app.post("/books/", response_model=schemas.Book)
-def create_book(book: schemas.BookCreate, db: Session = Depends(database.get_db)):
-    return crud.create_book(db=db, book=book)
+# Dependency
+def get_db_session():
+    return database.get_db()
 
-@app.get("/books/", response_model=list[schemas.Book])
-def read_books(skip: int = 0, limit: int = 10, db: Session = Depends(database.get_db)):
-    books = crud.get_books(db, skip=skip, limit=limit)
-    return books
+# Inventory Endpoints
+@app.get("/inventory/{book_id}", response_model=schemas.Inventory)
+def read_inventory(book_id: int, db: Session = Depends(get_db_session)):
+    inventory = crud.get_inventory(db, book_id=book_id)
+    if inventory is None:
+        raise HTTPException(status_code=404, detail="Inventory not found")
+    return inventory
 
-@app.get("/books/{book_id}", response_model=schemas.Book)
-def read_book(book_id: int, db: Session = Depends(database.get_db)):
-    db_book = crud.get_book(db, book_id=book_id)
-    if db_book is None:
-        raise HTTPException(status_code=404, detail="Book not found")
-    return db_book
+@app.post("/inventory/", response_model=schemas.Inventory)
+def create_inventory(inventory: schemas.InventoryCreate, db: Session = Depends(get_db_session)):
+    existing_inventory = crud.get_inventory(db, book_id=inventory.book_id)
+    if existing_inventory:
+        raise HTTPException(status_code=400, detail="Inventory for this book already exists")
+    return crud.create_inventory(db=db, inventory=inventory)
 
-@app.put("/books/{book_id}", response_model=schemas.Book)
-def update_book_quantity(book_id: int, quantity: int, db: Session = Depends(database.get_db)):
-    db_book = crud.update_book_quantity(db, book_id=book_id, quantity=quantity)
-    if db_book is None:
-        raise HTTPException(status_code=404, detail="Book not found")
-    
-    return db_book
+@app.put("/inventory/{book_id}", response_model=schemas.Inventory)
+def update_inventory(book_id: int, inventory_update: schemas.InventoryUpdate, db: Session = Depends(get_db_session)):
+    inventory = crud.update_inventory(db, book_id=book_id, quantity=inventory_update.quantity)
+    if inventory is None:
+        raise HTTPException(status_code=404, detail="Inventory not found")
+    return inventory
 
-@app.delete("/books/{book_id}", response_model=schemas.Book)
-def delete_book(book_id: int, db: Session = Depends(database.get_db)):
-    db_book = crud.delete_book(db, book_id=book_id)
-    if db_book is None:
-        raise HTTPException(status_code=404, detail="Book not found")
-    return db_book
+@app.delete("/inventory/{book_id}", response_model=schemas.Inventory)
+def delete_inventory(book_id: int, db: Session = Depends(get_db_session)):
+    inventory = crud.delete_inventory(db, book_id=book_id)
+    if inventory is None:
+        raise HTTPException(status_code=404, detail="Inventory not found")
+    return inventory
 
 @app.get("/")
 def read_root():

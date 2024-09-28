@@ -1,37 +1,29 @@
+# inventory_service/crud.py
+
 from sqlalchemy.orm import Session
+from . import models, schemas
 
-from app.models import Book
+def get_inventory(db: Session, book_id: int):
+    return db.query(models.Inventory).filter(models.Inventory.book_id == book_id).first()
 
-from app.schemas import BookCreate
-
-from . import models
-
-
-def create_book(db: Session, book: BookCreate):
-    db_book = models.Book(title=book.title, author=book.author, isbn=book.isbn, quantity=book.quantity)
-    db.add(db_book)
+def create_inventory(db: Session, inventory: schemas.InventoryCreate):
+    db_inventory = models.Inventory(book_id=inventory.book_id, quantity=inventory.quantity)
+    db.add(db_inventory)
     db.commit()
-    db.refresh(db_book)
-    return db_book
+    db.refresh(db_inventory)
+    return db_inventory
 
-
-def get_books(db: Session, skip: int = 0, limit: int = 10):
-    return db.query(Book).offset(skip).limit(limit).all()
-
-def get_book(db: Session, book_id: int):
-    return db.query(Book).filter(Book.id == book_id).first()
-
-def update_book_quantity(db: Session, book_id: int, quantity: int):
-    db_book = db.query(Book).filter(Book.id == book_id).first()
-    if db_book:
-        db_book.quantity = quantity
+def update_inventory(db: Session, book_id: int, quantity: int):
+    db_inventory = db.query(models.Inventory).filter(models.Inventory.book_id == book_id).first()
+    if db_inventory:
+        db_inventory.quantity = quantity
         db.commit()
-        db.refresh(db_book)
-    return db_book
+        db.refresh(db_inventory)
+    return db_inventory
 
-def delete_book(db: Session, book_id: int):
-    db_book = db.query(Book).filter(Book.id == book_id).first()
-    if db_book:
-        db.delete(db_book)
+def delete_inventory(db: Session, book_id: int):
+    db_inventory = db.query(models.Inventory).filter(models.Inventory.book_id == book_id).first()
+    if db_inventory:
+        db.delete(db_inventory)
         db.commit()
-    return db_book
+    return db_inventory

@@ -1,21 +1,25 @@
+# inventory_service/schemas.py
+
 from pydantic import BaseModel
 
-class BookCreate(BaseModel):
-    title: str
-    author: str
-    isbn: str
+class InventoryBase(BaseModel):
+    book_id: int
     quantity: int
 
     class Config:
-        from_attributes = True
+        orm_mode = True
 
+class InventoryCreate(InventoryBase):
+    pass
 
-class Book(BaseModel):
+class InventoryUpdate(BaseModel):
+    quantity: int
+
+    class Config:
+        orm_mode = True
+
+class Inventory(InventoryBase):
     id: int
-    title: str
-    author: str
-    isbn: str
-    quantity: int
 
     class Config:
-        from_attributes = True  # orm_mode yerine bunu kullanın
+        orm_mode = True
