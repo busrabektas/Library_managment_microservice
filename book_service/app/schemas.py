@@ -13,4 +13,4 @@ class Book(BookBase):
     id: int
 
     class Config:
-        from_attributes = True  # orm_mode yerine bunu kullanın
+        from_attributes = True  

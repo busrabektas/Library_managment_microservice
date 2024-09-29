@@ -5,6 +5,9 @@ class UserBase(BaseModel):
     email: str
     age: int
 
+    class Config:
+        from_attributes = True
+
 class UserCreate(UserBase):
     pass
 
@@ -12,4 +15,4 @@ class User(UserBase):
     id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True

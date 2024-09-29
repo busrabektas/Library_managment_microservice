@@ -1,70 +1,104 @@
 # inventory_service/consumer.py
 
-from kafka import KafkaConsumer
-import json
 import os
+import json
+from kafka import KafkaConsumer
 from sqlalchemy.orm import Session
-from . import crud, schemas, database
-import asyncio
+from .database import SessionLocal
+from . import crud, schemas
 import logging
 
+# Logging ayarları
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+handler = logging.StreamHandler()
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
 
 KAFKA_BOOTSTRAP_SERVERS = os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'kafka:9092')
-TOPIC = 'book_events'
 
-async def consume_events():
+def consume_book_events():
+    TOPIC = 'book_events'
     consumer = KafkaConsumer(
         TOPIC,
-        bootstrap_servers=[KAFKA_BOOTSTRAP_SERVERS],
-        value_deserializer=lambda m: json.loads(m.decode('utf-8')),
+        bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
         auto_offset_reset='earliest',
         enable_auto_commit=True,
-        group_id='inventory-service-group'
+        group_id='inventory-service-book-group',
+        value_deserializer=lambda m: json.loads(m.decode('utf-8'))
     )
+    logger.info("Inventory Service: Book Events Consumer started")
+    for message in consumer:
+        event = message.value
+        event_type = event.get('type')
+        data = event.get('data')
+        
+        logger.info(f"Inventory Service: Received event {event_type} with data {data}")
+        
+        db: Session = SessionLocal()
+        try:
+            if event_type == 'BOOK_CREATED':
+                # Yeni kitap için stok oluştur
+                inventory_create = schemas.InventoryCreate(book_id=data['id'], quantity=10)  # Varsayılan miktar
+                crud.create_inventory(db, inventory_create)
+                logger.info(f"Inventory Service: Created inventory for book ID {data['id']}")
+            elif event_type == 'BOOK_DELETED':
+                book_id = data.get('id')
+                if book_id:
+                    try:
+                        updated_inventory = crud.update_inventory_quantity(db, book_id=book_id, quantity_change=-1)
+                        if updated_inventory:
+                            logger.info(f"Inventory Service: Decreased stock for book ID {book_id}. New quantity: {updated_inventory.quantity}")
+                        else:
+                            logger.info(f"Inventory Service: Inventory for book ID {book_id} deleted as quantity reached zero.")
+                    except ValueError as ve:
+                        logger.error(f"Inventory Service: {ve}")
+        except Exception as e:
+            logger.error(f"Inventory Service: Error processing book event {event_type}: {e}")
+        finally:
+            db.close()
 
-    logger.info(f"Kafka consumer started for topic: {TOPIC}")
-
-    loop = asyncio.get_event_loop()
-
-    try:
-        for message in consumer:
-            event = message.value
-            event_type = event.get('type')
-            book_data = event.get('data')
-
-            if not event_type or not book_data:
-                logger.warning("Invalid event format received.")
-                continue
-
-            await handle_event(event_type, book_data)
-    except asyncio.CancelledError:
-        logger.info("Kafka consumer task cancelled.")
-    except Exception as e:
-        logger.error(f"Error in Kafka consumer: {e}")
-    finally:
-        consumer.close()
-
-async def handle_event(event_type: str, book_data: dict):
-    db_gen = database.get_db()
-    db: Session = next(db_gen)
-    try:
-        if event_type == 'BOOK_CREATED':
-            book_id = book_data.get('id')
-            if book_id:
-                # Initialize inventory with default quantity, e.g., 0
-                existing_inventory = crud.get_inventory(db, book_id=book_id)
-                if not existing_inventory:
-                    inventory_create = schemas.InventoryCreate(book_id=book_id, quantity=0)
-                    crud.create_inventory(db, inventory_create)
-                    logger.info(f"Inventory created for book_id: {book_id}")
-        elif event_type == 'BOOK_DELETED':
-            book_id = book_data.get('id')
-            if book_id:
-                crud.delete_inventory(db, book_id=book_id)
-                logger.info(f"Inventory deleted for book_id: {book_id}")
-        # Handle other event types like 'BOOK_UPDATED' if necessary
-    except Exception as e:
-        logger.error(f"Error handling event {event_type}: {e}")
-    finally:
-        db.close()
+def consume_loan_events():
+    TOPIC = 'loan_events'
+    consumer = KafkaConsumer(
+        TOPIC,
+        bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
+        auto_offset_reset='earliest',
+        enable_auto_commit=True,
+        group_id='inventory-service-loan-group',
+        value_deserializer=lambda m: json.loads(m.decode('utf-8'))
+    )
+    logger.info("Inventory Service: Loan Events Consumer started")
+    for message in consumer:
+        event = message.value
+        event_type = event.get('type')
+        data = event.get('loan')
+        
+        logger.info(f"Inventory Service: Received event {event_type} with data {data}")
+        
+        db: Session = SessionLocal()
+        try:
+            if event_type == 'BOOK_LOANED':
+                book_id = data.get('book_id')
+                if book_id:
+                    try:
+                        updated_inventory = crud.update_inventory_quantity(db, book_id=book_id, quantity_change=-1)
+                        if updated_inventory:
+                            logger.info(f"Inventory Service: Decreased stock for book ID {book_id}. New quantity: {updated_inventory.quantity}")
+                        else:
+                            logger.info(f"Inventory Service: Inventory for book ID {book_id} deleted as quantity reached zero.")
+                    except ValueError as ve:
+                        logger.error(f"Inventory Service: {ve}")
+            elif event_type == 'BOOK_RETURNED':
+                book_id = data.get('book_id')
+                if book_id:
+                    try:
+                        updated_inventory = crud.update_inventory_quantity(db, book_id=book_id, quantity_change=1)
+                        logger.info(f"Inventory Service: Increased stock for book ID {book_id}. New quantity: {updated_inventory.quantity if updated_inventory else 'N/A'}")
+                    except ValueError as ve:
+                        logger.error(f"Inventory Service: {ve}")
+        except Exception as e:
+            logger.error(f"Inventory Service: Error processing loan event {event_type}: {e}")
+        finally:
+            db.close()

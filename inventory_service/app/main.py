@@ -5,31 +5,39 @@ from sqlalchemy.orm import Session
 from typing import List
 from contextlib import asynccontextmanager
 import asyncio
+import threading
 import logging
 
 from . import crud, models, schemas, database
-# from .producer import send_inventory_update
-# from .kafka_admin import create_kafka_topic
-# from .consumer import consume_events
+from .consumer import consume_book_events, consume_loan_events
 
-# Set up logging
+# Logging ayarları
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-
-
 models.Base.metadata.create_all(bind=database.engine)
 
-# Initialize FastAPI app with lifespan
 app = FastAPI()
-
-# Create tables
 
 # Dependency
 def get_db_session():
-    return database.get_db()
+    return next(database.get_db())
 
-# Inventory Endpoints
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Arka planda Kafka tüketicilerini başlatın
+    book_consumer_thread = threading.Thread(target=consume_book_events, daemon=True)
+    book_consumer_thread.start()
+    logger.info("Inventory Service: Book Events Consumer thread started")
+
+    loan_consumer_thread = threading.Thread(target=consume_loan_events, daemon=True)
+    loan_consumer_thread.start()
+    logger.info("Inventory Service: Loan Events Consumer thread started")
+
+    yield
+
+app = FastAPI(lifespan=lifespan)
+
 @app.get("/inventory/{book_id}", response_model=schemas.Inventory)
 def read_inventory(book_id: int, db: Session = Depends(get_db_session)):
     inventory = crud.get_inventory(db, book_id=book_id)
@@ -46,10 +54,13 @@ def create_inventory(inventory: schemas.InventoryCreate, db: Session = Depends(g
 
 @app.put("/inventory/{book_id}", response_model=schemas.Inventory)
 def update_inventory(book_id: int, inventory_update: schemas.InventoryUpdate, db: Session = Depends(get_db_session)):
-    inventory = crud.update_inventory(db, book_id=book_id, quantity=inventory_update.quantity)
-    if inventory is None:
-        raise HTTPException(status_code=404, detail="Inventory not found")
-    return inventory
+    try:
+        inventory = crud.update_inventory_quantity(db, book_id=book_id, quantity_change=inventory_update.quantity_change)
+        if inventory is None:
+            raise HTTPException(status_code=404, detail="Inventory not found or quantity reached zero")
+        return inventory
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
 
 @app.delete("/inventory/{book_id}", response_model=schemas.Inventory)
 def delete_inventory(book_id: int, db: Session = Depends(get_db_session)):

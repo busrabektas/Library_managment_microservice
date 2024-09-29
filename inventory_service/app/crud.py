@@ -13,13 +13,23 @@ def create_inventory(db: Session, inventory: schemas.InventoryCreate):
     db.refresh(db_inventory)
     return db_inventory
 
-def update_inventory(db: Session, book_id: int, quantity: int):
+def update_inventory_quantity(db: Session, book_id: int, quantity_change: int):
+
     db_inventory = db.query(models.Inventory).filter(models.Inventory.book_id == book_id).first()
     if db_inventory:
-        db_inventory.quantity = quantity
+        new_quantity = db_inventory.quantity + quantity_change
+        if new_quantity < 0:
+            raise ValueError("Yetersiz stok miktarı.")
+        db_inventory.quantity = new_quantity
         db.commit()
         db.refresh(db_inventory)
-    return db_inventory
+        if db_inventory.quantity == 0:
+            db.delete(db_inventory)
+            db.commit()
+            return None  # Stok sıfırlandı, envanter silindi.
+        return db_inventory
+    else:
+        raise ValueError("Envanter bulunamadı.")
 
 def delete_inventory(db: Session, book_id: int):
     db_inventory = db.query(models.Inventory).filter(models.Inventory.book_id == book_id).first()

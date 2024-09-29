@@ -7,6 +7,6 @@ class Loan(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, index=True)
     book_id = Column(Integer, index=True)
-    loan_date = Column(DateTime)
-    return_date = Column(DateTime, nullable=True)
+    loan_date = Column(DateTime(timezone=True))
+    return_date = Column(DateTime(timezone=True), nullable=True)
     is_returned = Column(Boolean, default=False)

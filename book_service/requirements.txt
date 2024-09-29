@@ -3,6 +3,6 @@ uvicorn
 sqlalchemy
 confluent-kafka
 pydantic
-PyMySQL
+pymysql
 kafka-python
 cryptography
