@@ -1,5 +1,3 @@
-# inventory_service/main.py
-
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
@@ -11,7 +9,6 @@ import logging
 from . import crud, models, schemas, database
 from .consumer import consume_book_events, consume_loan_events
 
-# Logging ayarları
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -19,13 +16,12 @@ models.Base.metadata.create_all(bind=database.engine)
 
 app = FastAPI()
 
-# Dependency
+
 def get_db_session():
     return next(database.get_db())
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Arka planda Kafka tüketicilerini başlatın
     book_consumer_thread = threading.Thread(target=consume_book_events, daemon=True)
     book_consumer_thread.start()
     logger.info("Inventory Service: Book Events Consumer thread started")

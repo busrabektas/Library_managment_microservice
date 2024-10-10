@@ -1,5 +1,3 @@
-# user_service/main.py
-
 from fastapi import Depends, FastAPI, HTTPException
 from sqlalchemy.orm import Session
 from typing import List

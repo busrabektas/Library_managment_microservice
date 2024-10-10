@@ -34,7 +34,7 @@ services:
     container_name: mysql
     restart: always
     environment:
-      MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'  # Boş şifre kullanımına izin ver
+      MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'  
       MYSQL_DATABASE: library_db
     ports:
       - '3307:3306'
@@ -62,9 +62,6 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: 'kafka:9092'
       SQLALCHEMY_DATABASE_URL: "mysql+pymysql://root:@mysql:3306/library_db"
 
-
-
-
   loan-service:
     build:
       context: ./loan_service  
@@ -82,7 +79,7 @@ services:
 
   user-service:
     build:
-      context: ./user_service  # User service'in dosya yolu
+      context: ./user_service  
     container_name: user-service
     depends_on:
       kafka:
@@ -90,7 +87,7 @@ services:
       mysql:
         condition: service_started
     ports:
-      - '8003:8003'  # User Service portu
+      - '8003:8003' 
     environment:
       KAFKA_BOOTSTRAP_SERVERS: 'kafka:9092'
       SQLALCHEMY_DATABASE_URL: "mysql+pymysql://root:@mysql:3306/library_db"
@@ -111,51 +108,12 @@ services:
         KAFKA_BOOTSTRAP_SERVERS: 'kafka:9092'
         SQLALCHEMY_DATABASE_URL: 'mysql+pymysql://root:@mysql/library_db'
 
-
-
-
-
 volumes:
   mysql-data:
 
 
 
-  # book_service:
-  #   build: ./book_service
-  #   ports:
-  #     - "8001:8001"
-  #   depends_on:
-  #     - kafka
-
-  #   command: ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port 8001 & python app/consumer.py"]
 
 
-  # user_service:
-  #   build: ./user_service
-  #   ports:
-  #     - "8002:8002"
-  #   depends_on:
-  #     - kafka
-  #   environment:
-  #     KAFKA_BROKER_URL: kafka:9092
-  #   command: ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port 8002 & python app/consumer.py"]
 
-  # loan_service:
-  #   build: ./loan_service
-  #   ports:
-  #     - "8003:8003"
-  #   depends_on:
-  #     - kafka
-  #   environment:
-  #     KAFKA_BROKER_URL: kafka:9092
-  #   command: ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port 8003 & python app/consumer.py"]
-
-  # inventory_service:
-  #   build: ./inventory_service
-  #   ports:
-  #     - "8004:8004"
-  #   depends_on:
-  #     - kafka
-  #   environment:
-  #     KAFKA_BROKER_URL: kafka:9092
-  #   command: ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port 8004 & python app/consumer.py"]
+ 

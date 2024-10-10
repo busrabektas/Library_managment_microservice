@@ -1,5 +1,3 @@
-# inventory_service/crud.py
-
 from sqlalchemy.orm import Session
 from . import models, schemas
 
@@ -26,7 +24,7 @@ def update_inventory_quantity(db: Session, book_id: int, quantity_change: int):
         if db_inventory.quantity == 0:
             db.delete(db_inventory)
             db.commit()
-            return None  # Stok sıfırlandı, envanter silindi.
+            return None  
         return db_inventory
     else:
         raise ValueError("Envanter bulunamadı.")

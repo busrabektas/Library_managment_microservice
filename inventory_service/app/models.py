@@ -1,5 +1,3 @@
-# inventory_service/models.py
-
 from sqlalchemy import Column, Integer
 from .database import Base
 

@@ -4,7 +4,6 @@ WORKDIR /app
 
 COPY requirements.txt .
 
-# Gerekli sistem paketlerini kurun
 RUN apt-get update && apt-get install -y \
     build-essential \
     libssl-dev \

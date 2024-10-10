@@ -1,5 +1,3 @@
-# user_service/crud.py
-
 from sqlalchemy.orm import Session
 from . import models, schemas
 

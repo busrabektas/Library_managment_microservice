@@ -1,5 +1,3 @@
-# inventory_service/consumer.py
-
 import os
 import json
 from kafka import KafkaConsumer
@@ -8,7 +6,6 @@ from .database import SessionLocal
 from . import crud, schemas
 import logging
 
-# Logging ayarları
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 handler = logging.StreamHandler()
@@ -39,8 +36,7 @@ def consume_book_events():
         db: Session = SessionLocal()
         try:
             if event_type == 'BOOK_CREATED':
-                # Yeni kitap için stok oluştur
-                inventory_create = schemas.InventoryCreate(book_id=data['id'], quantity=10)  # Varsayılan miktar
+                inventory_create = schemas.InventoryCreate(book_id=data['id'], quantity=10) 
                 crud.create_inventory(db, inventory_create)
                 logger.info(f"Inventory Service: Created inventory for book ID {data['id']}")
             elif event_type == 'BOOK_DELETED':
