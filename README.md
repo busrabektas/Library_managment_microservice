@@ -25,7 +25,7 @@ This project can be build by simply running this command:
 ```
 docker-compose up --build -d
 ```
-![alt text](image.png)
+![alt text](images/image.png)
 
 1. After that you can create user with this command on Postman or from your terminal.
 
@@ -58,7 +58,7 @@ USE library_db
 
 * Inventory default quantity is 10
 
-![alt text](image-1.png)
+![alt text](images/image-1.png)
 
 4. Loan the book with this command:
 
@@ -68,11 +68,11 @@ curl -X POST "http://localhost:8001/loans" -H "Content-Type: application/json" -
     "book_id": 1
 }'
 ```
-![alt text](image-2.png)
+![alt text](images/image-2.png)
 
 * Inventory decreased 1!
 
-![alt text](image-3.png)
+![alt text](images/image-3.png)
 
 5. Return the book with this command
 
@@ -81,7 +81,7 @@ curl -X PUT "http://localhost:8001/loans/4/return"
 ```
 
 
-![alt text](image-4.png)
+![alt text](images/image-4.png)
 
 
 6. Let's check logs of this process
@@ -90,13 +90,13 @@ curl -X PUT "http://localhost:8001/loans/4/return"
 docker-compose logs -f inventory-service
 ```
 
-![alt text](image-5.png)
+![alt text](images/image-5.png)
 
 
 
 ```
 docker-compose logs -f loan-service
 ```
-![alt text](image-7.png)
+![alt text](images/image-7.png)
 
-![alt text](image-8.png)
+![alt text](images/image-8.png)
